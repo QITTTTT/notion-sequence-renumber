@@ -19,13 +19,13 @@ node --env-file=.env renumber.mjs
 
 ## 免费定时运行
 
-`.github/workflows/renumber.yml` 每 15 分钟运行一次。把本目录放进 GitHub 仓库后，在仓库 Settings → Secrets and variables → Actions 中新增：
+`.github/workflows/renumber.yml` 每 5 分钟运行一次（GitHub Actions 支持的最短定时间隔）。把本目录放进 GitHub 仓库后，在仓库 Settings → Secrets and variables → Actions 中新增：
 
 - `NOTION_TOKEN`：Notion connection token
 
 workflow 文件需要提交到默认分支。配置好 Secret 后，打开 Actions → Notion 序号重排 → Run workflow，先手动运行一次并检查日志。
 
-工作流使用 Node.js 24，无需安装额外依赖，每小时第 7、22、37、52 分钟自动运行，并避免多个任务同时重排。运行结果会输出总记录数和更新记录数。
+工作流使用 Node.js 24，无需安装额外依赖，每小时第 2、7、12、17、22、27、32、37、42、47、52、57 分钟自动运行，并避免多个任务同时重排。运行结果会输出总记录数和更新记录数。
 
 如需更换目标数据源，在同一设置页面的 Variables 中添加 `NOTION_DATA_SOURCE_ID`；不设置时使用脚本内现有的数据源 ID。连接必须能访问目标数据库并拥有更新内容权限。
 
