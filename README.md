@@ -23,7 +23,13 @@ node --env-file=.env renumber.mjs
 
 - `NOTION_TOKEN`：Notion connection token
 
-随后启用 Actions 即可。GitHub 定时任务可能有延迟，因此它不是严格实时触发；要做到变更后立即运行，需要 Notion webhook 加一个可公开访问的服务端点。
+workflow 文件需要提交到默认分支。配置好 Secret 后，打开 Actions → Notion 序号重排 → Run workflow，先手动运行一次并检查日志。
+
+工作流使用 Node.js 24，无需安装额外依赖，每小时第 7、22、37、52 分钟自动运行，并避免多个任务同时重排。运行结果会输出总记录数和更新记录数。
+
+如需更换目标数据源，在同一设置页面的 Variables 中添加 `NOTION_DATA_SOURCE_ID`；不设置时使用脚本内现有的数据源 ID。连接必须能访问目标数据库并拥有更新内容权限。
+
+GitHub 定时任务可能有延迟，因此它不是严格实时触发；要做到变更后立即运行，需要 Notion webhook 加一个可公开访问的服务端点。公开仓库连续 60 天没有活动时，定时工作流可能被自动停用，需要在 Actions 中重新启用。
 
 ## 注意
 

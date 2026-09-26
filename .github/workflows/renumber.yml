@@ -1,0 +1,40 @@
+name: Notion 序号重排
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notion-renumber
+  cancel-in-progress: false
+
+jobs:
+  renumber:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 获取代码
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: 检查并重排序号
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATA_SOURCE_ID: ${{ vars.NOTION_DATA_SOURCE_ID }}
+        run: |
+          if [ -z "$NOTION_TOKEN" ]; then
+            echo "::error::请在 Settings → Secrets and variables → Actions 添加 NOTION_TOKEN secret。"
+            exit 1
+          fi
+          node renumber.mjs
