@@ -19,13 +19,17 @@ node --env-file=.env renumber.mjs
 
 ## 免费定时运行
 
-`.github/workflows/renumber.yml` 每 5 分钟运行一次（GitHub Actions 支持的最短定时间隔）。把本目录放进 GitHub 仓库后，在仓库 Settings → Secrets and variables → Actions 中新增：
+`.github/workflows/renumber.yml` 每 5 分钟触发一次（GitHub Actions 支持的最短定时间隔），每个任务内持续重排，每轮完成后等待 1 秒再运行下一轮。把本目录放进 GitHub 仓库后，在仓库 Settings → Secrets and variables → Actions 中新增：
 
 - `NOTION_TOKEN`：Notion connection token
 
 workflow 文件需要提交到默认分支。配置好 Secret 后，打开 Actions → Notion 序号重排 → Run workflow，先手动运行一次并检查日志。
 
-工作流使用 Node.js 24，无需安装额外依赖，每小时第 2、7、12、17、22、27、32、37、42、47、52、57 分钟自动运行，并避免多个任务同时重排。运行结果会输出总记录数和更新记录数。
+工作流使用 Node.js 24，无需安装额外依赖，每小时第 2、7、12、17、22、27、32、37、42、47、52、57 分钟触发，并避免多个任务同时重排。已有任务运行时，后续任务等待执行。
+
+每个任务循环约 12 分钟后停止开启新一轮，最后一轮最多执行 2 分钟，为 15 分钟的任务超时预留结束时间。每轮出错或超过 2 分钟会使任务失败，不会继续快速重试。日志会输出轮次、总记录数和更新记录数。
+
+1 秒是两轮之间的等待时间，实际检查间隔为“本轮耗时 + 1 秒”；任务交接还可能有排队空档。此模式会持续占用 Actions runner，并频繁查询 Notion；脚本仍只写入序号发生变化的记录，遇到限流会按原有逻辑退避重试。
 
 如需更换目标数据源，在同一设置页面的 Variables 中添加 `NOTION_DATA_SOURCE_ID`；不设置时使用脚本内现有的数据源 ID。连接必须能访问目标数据库并拥有更新内容权限。
 
