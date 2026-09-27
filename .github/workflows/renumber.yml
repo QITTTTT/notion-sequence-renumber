@@ -2,11 +2,20 @@ name: Notion 序号重排
 
 on:
   workflow_dispatch:
+    inputs:
+      polling_minutes:
+        description: '本次循环时长（1 分钟用于验证接续，后续恢复 12 分钟）'
+        type: choice
+        options:
+          - '12'
+          - '1'
+        default: '12'
   schedule:
     - cron: '2-59/5 * * * *'
 
 permissions:
   contents: read
+  actions: write
 
 concurrency:
   group: notion-renumber
@@ -33,6 +42,7 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATA_SOURCE_ID: ${{ vars.NOTION_DATA_SOURCE_ID }}
+          POLLING_MINUTES: ${{ inputs.polling_minutes || '12' }}
         run: |
           if [ -z "$NOTION_TOKEN" ]; then
             echo "::error::请在 Settings → Secrets and variables → Actions 添加 NOTION_TOKEN secret。"
@@ -40,7 +50,11 @@ jobs:
           fi
           # Stop starting new rounds after 12 minutes, leaving time for the last
           # round to finish before the 15-minute job timeout.
-          deadline=$((SECONDS + 720))
+          case "$POLLING_MINUTES" in
+            1|12) ;;
+            *) echo "::error::Invalid polling_minutes"; exit 1 ;;
+          esac
+          deadline=$((SECONDS + POLLING_MINUTES * 60))
           round=0
           while (( SECONDS < deadline )); do
             round=$((round + 1))
@@ -50,3 +64,12 @@ jobs:
             sleep 1
           done
           echo "Polling window complete: $round rounds."
+
+      - name: 主动启动下一次运行
+        if: ${{ success() && vars.AUTO_CONTINUE != 'false' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          gh workflow run renumber.yml --ref "$DEFAULT_BRANCH" -f polling_minutes=12
