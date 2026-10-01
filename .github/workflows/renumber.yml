@@ -37,33 +37,16 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
+      - name: 验证故障恢复逻辑
+        run: node --test recovery.test.mjs
+
       - name: 持续检查并重排序号（轮次间隔 1 秒）
         shell: bash
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATA_SOURCE_ID: ${{ vars.NOTION_DATA_SOURCE_ID }}
           POLLING_MINUTES: ${{ inputs.polling_minutes || '12' }}
-        run: |
-          if [ -z "$NOTION_TOKEN" ]; then
-            echo "::error::请在 Settings → Secrets and variables → Actions 添加 NOTION_TOKEN secret。"
-            exit 1
-          fi
-          # Stop starting new rounds after 12 minutes, leaving time for the last
-          # round to finish before the 15-minute job timeout.
-          case "$POLLING_MINUTES" in
-            1|12) ;;
-            *) echo "::error::Invalid polling_minutes"; exit 1 ;;
-          esac
-          deadline=$((SECONDS + POLLING_MINUTES * 60))
-          round=0
-          while (( SECONDS < deadline )); do
-            round=$((round + 1))
-            echo "Round $round"
-            # Exit on errors or a stuck round; never overlap two renumber runs.
-            timeout 120s node renumber.mjs
-            sleep 1
-          done
-          echo "Polling window complete: $round rounds."
+        run: bash poll.sh
 
       - name: 主动启动下一次运行
         if: ${{ success() && vars.AUTO_CONTINUE != 'false' }}
